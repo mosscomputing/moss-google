@@ -100,4 +100,4 @@ if verify_result.valid:
 
 ## License
 
-MIT
+Proprietary - See [LICENSE](LICENSE) for terms.
