@@ -1,8 +1,13 @@
 # moss-google
 
-MOSS signing integration for Google GenAI SDK (Gemini). **Unsigned output is broken output.**
+Cryptographic signing for Google GenAI SDK (Gemini) outputs using ML-DSA-44 post-quantum signatures.
 
 [![PyPI](https://img.shields.io/pypi/v/moss-google)](https://pypi.org/project/moss-google/)
+[![License](https://img.shields.io/badge/license-BSL--1.1-blue)](LICENSE)
+
+## Overview
+
+moss-google integrates MOSS cryptographic signing into your Google GenAI SDK usage. Every function call, response, and content block gets a tamper-evident signature using ML-DSA-44 (NIST FIPS 204), the post-quantum cryptographic standard. This creates an immutable audit trail for compliance, debugging, and accountability.
 
 ## Installation
 
@@ -12,16 +17,13 @@ pip install moss-google
 
 ## Quick Start
 
-Sign function calls, responses, and content from Gemini:
-
 ```python
 import google.generativeai as genai
-from moss_google import sign_function_call, sign_response, sign_content
+from moss_google import sign_function_call, sign_response
 
 genai.configure(api_key="...")
 model = genai.GenerativeModel("gemini-pro")
 
-# Get a response with function calling
 response = model.generate_content(
     "What's the weather in NYC?",
     tools=[get_weather_tool]
@@ -30,24 +32,41 @@ response = model.generate_content(
 # Sign the full response
 result = sign_response(response, agent_id="weather-bot")
 print(f"Signed: {result.signature[:20]}...")
+```
+
+## Features
+
+- **ML-DSA-44 signatures** - Post-quantum cryptographic standard (NIST FIPS 204)
+- **Function call signing** - Sign every Gemini function call
+- **Response signing** - Sign GenerateContentResponse objects
+- **Content signing** - Sign Content and Part objects
+- **Policy enforcement** - Block high-risk actions with enterprise policies
+- **Offline verification** - Verify signatures without network access
+
+## Usage Examples
+
+### Basic Usage
+
+```python
+from moss_google import sign_function_call, sign_response, verify_envelope
 
 # Sign individual function calls
 for part in response.candidates[0].content.parts:
     if hasattr(part, "function_call"):
-        result = sign_function_call(part.function_call, agent_id="weather-bot")
+        result = sign_function_call(part.function_call, agent_id="my-bot")
+
+# Verify any envelope
+verify_result = verify_envelope(result.envelope)
+print(f"Valid: {verify_result.valid}, Subject: {verify_result.subject}")
 ```
 
-## Enterprise Mode
-
-Set `MOSS_API_KEY` for automatic policy evaluation:
+### With Policy Enforcement
 
 ```python
 import os
 os.environ["MOSS_API_KEY"] = "your-api-key"
 
-from moss_google import sign_function_call, enterprise_enabled
-
-print(f"Enterprise: {enterprise_enabled()}")  # True
+from moss_google import sign_function_call
 
 result = sign_function_call(
     function_call,
@@ -59,17 +78,7 @@ if result.blocked:
     print(f"Blocked by policy: {result.policy.reason}")
 ```
 
-## Verification
-
-```python
-from moss_google import verify_envelope
-
-verify_result = verify_envelope(result.envelope)
-if verify_result.valid:
-    print(f"Signed by: {verify_result.subject}")
-```
-
-## All Functions
+## API Reference
 
 | Function | Description |
 |----------|-------------|
@@ -82,27 +91,21 @@ if verify_result.valid:
 | `sign_part()` | Sign a Part (text or function call) |
 | `sign_part_async()` | Async version |
 | `verify_envelope()` | Verify a signed envelope |
+| `enterprise_enabled()` | Check if enterprise mode is active |
 
-## Enterprise Features
+## Configuration
 
-| Feature | Free | Enterprise |
-|---------|------|------------|
-| Local signing | ✓ | ✓ |
-| Offline verification | ✓ | ✓ |
-| Policy evaluation | - | ✓ |
-| Evidence retention | - | ✓ |
-| Audit exports | - | ✓ |
+| Environment Variable | Description |
+|---------------------|-------------|
+| `MOSS_API_KEY` | API key for enterprise features (policy enforcement, SIEM) |
+| `MOSS_API_URL` | Custom API endpoint (default: api.mosscomputing.com) |
 
 ## Links
 
-- [moss-sdk](https://pypi.org/project/moss-sdk/) - Core MOSS SDK
-- [mosscomputing.com](https://mosscomputing.com) - Project site
+- [Documentation](https://docs.mosscomputing.com/sdks/google)
+- [Dashboard](https://app.mosscomputing.com)
+- [PyPI](https://pypi.org/project/moss-google/)
 
 ## License
 
-This package is licensed under the [Business Source License 1.1](LICENSE).
-
-- Free for evaluation, testing, and development
-- Free for non-production use
-- Production use requires a [MOSS subscription](https://mosscomputing.com/pricing)
-- Converts to Apache 2.0 on January 25, 2030
+Business Source License 1.1 - Production use requires a [MOSS subscription](https://mosscomputing.com/pricing).
